@@ -109,6 +109,16 @@ public:
                                 v.mode == Engine::Drone ? 1.3 - 0.065 * index : 1.0 - 0.035 * index;
             m.outGain = tilt * (0.48 + 0.52 * unit(0.5 + 0.5 * randomSigned(v.rng)));
             m.sideGain = 0.065 * chaos * (i % 2 == 0 ? 1.0 : -1.0);
+            // A struck plate starts with modal velocity, not just a short broadband noise burst.
+            // Initialize displacement in the stable resonator recurrence, with inharmonic mode phases.
+            if (v.mode == Engine::Impact || v.mode == Engine::Perc) {
+                const double fundamentalTilt = 1.0 / (1.0 + 0.11 * index);
+                const double initial = (v.mode == Engine::Impact ? 0.068 : 0.014) *
+                    fundamentalTilt * (0.60 + 0.4 * unit(0.5 + 0.5 * randomSigned(v.rng)));
+                const double omega = 6.283185307179586 * hz / rate_;
+                m.y1 = initial * std::sin(omega);
+                m.y2 = 0.0;
+            }
         }
     }
     void noteOff(int key, int32_t noteId = -1) noexcept {

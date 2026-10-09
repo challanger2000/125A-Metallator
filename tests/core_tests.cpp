@@ -57,5 +57,36 @@ int main() {
     s.noteOff(60); for(int i=0;i<44100*6 && s.activeVoices();++i) s.renderFrame();
     assert(s.activeVoices()==0);
     assert(nextGeneration(0x125A2026u)!=0x125A2026u);
+    // Stress all 12 voices, extreme controls and common host sample rates.
+    for(double rate : {44100.0,48000.0,96000.0,192000.0}) {
+        Synth crowded; crowded.setSampleRate(rate);
+        Patch extreme; extreme.engine=Engine::Impact; extreme.force=1.0;
+        extreme.chaos=1.0; extreme.decay=1.0; extreme.level=1.0;
+        crowded.setPatch(extreme);
+        for(int key=36;key<48;++key)crowded.noteOn(key,1.0,key);
+        assert(crowded.activeVoices()==Synth::kVoices);
+        for(int frame=0;frame<int(rate*0.35);++frame) {
+            const auto x=crowded.renderFrame();
+            assert(std::isfinite(x[0])&&std::isfinite(x[1]));
+            assert(std::abs(x[0])<=0.98&&std::abs(x[1])<=0.98);
+        }
+        crowded.allNotesOff();
+        crowded.reset();
+        assert(crowded.activeVoices()==0);
+    }
+    // Key tracking is opt-in and applies only to the pitched DRONE resonances.
+    const auto droneA=render(Engine::Drone,0x12345u,48);
+    const auto droneB=render(Engine::Drone,0x12345u,72);
+    assert(droneA==droneB); // Key tracking off by default.
+    Synth keyed1,keyed2; keyed1.setSampleRate(44100);keyed2.setSampleRate(44100);
+    Patch keyedPatch; keyedPatch.engine=Engine::Drone; keyedPatch.keyTrack=1.0;
+    keyed1.setPatch(keyedPatch);keyed2.setPatch(keyedPatch);
+    keyed1.noteOn(48,1);keyed2.noteOn(72,1);
+    double tunedDifference=0.0;
+    for(int i=0;i<44100;++i) {
+        const double delta=keyed1.renderFrame()[0]-keyed2.renderFrame()[0];
+        tunedDifference+=delta*delta;
+    }
+    assert(tunedDifference>1.e-6);
     std::cout << "Core DSP QA PASS\n";
 }
