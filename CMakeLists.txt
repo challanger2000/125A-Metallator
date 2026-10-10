@@ -50,6 +50,12 @@ if(METALLATOR_BUILD_VST3)
         source/factory.cpp
         source/version.h)
     target_compile_definitions(125A_Metallator PRIVATE SMTG_USE_STDATOMIC_H=1)
+    # VSTGUI uses Steinberg::getPlatformModuleHandle() from moduleinit.cpp.
+    # Supply the SDK's actual Windows DLL entry point (sets moduleHandle to HINSTANCE);
+    # do not fake a nullptr module handle or duplicate entry exports.
+    if(SMTG_WIN)
+        target_sources(125A_Metallator PRIVATE ${SDK_ROOT}/public.sdk/source/main/dllmain.cpp)
+    endif()
     target_link_libraries(125A_Metallator PRIVATE sdk vstgui_support)
     smtg_target_add_plugin_resources(125A_Metallator RESOURCES resource/metallator.uidesc)
     smtg_target_configure_version_file(125A_Metallator)
