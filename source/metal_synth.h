@@ -138,15 +138,19 @@ public:
     int activeVoices() const noexcept { int n = 0; for (const auto& v : voices_) n += int(v.active); return n; }
 
     std::array<double, 2> renderFrame() noexcept {
-        double mid = 0.0, side = 0.0;
+        // All voices return channel-domain L/R. IMPACT already synthesizes stereo;
+        // the other three engines convert their modal Mid/Side pair before return.
+        // NEVER interpret the full stereo IMPACT output as Mid/Side a second time.
+        double left = 0.0, right = 0.0;
         for (auto& v : voices_) {
             if (!v.active) continue;
-            const auto frame = renderVoice(v);
-            mid += frame[0]; side += frame[1];
+            const auto stereo = renderVoice(v);
+            left += stereo[0];
+            right += stereo[1];
         }
         const double gain = 0.26 * patch_.level;
-        const double l = (mid + side) * gain;
-        const double r = (mid - side) * gain;
+        const double l = left * gain;
+        const double r = right * gain;
         // Continuous bounded soft ceiling for unusually dense polyphony. Exactly linear
         // up to +/-0.70; C1 at knee. Avoids flat hard-clipped sample plateaus when
         // many independent metal bodies collide simultaneously. Parameter-free safety,
@@ -254,7 +258,12 @@ private:
         const double side = stereo * amp;
         ++v.age;
         if (v.age >= v.maxAge || (v.released && v.releaseGain < 1.e-5)) v.active = false;
-        return {std::isfinite(value) ? value : 0.0, std::isfinite(side) ? side : 0.0};
+        // Legacy modal engines use an internal M/S representation. Convert here,
+        // so the final voice mixer receives the same L/R contract for every engine.
+        const double left = value + side;
+        const double right = value - side;
+        return {std::isfinite(left) ? left : 0.0,
+                std::isfinite(right) ? right : 0.0};
     }
     Patch patch_ {};
     double rate_ {44100.0};
