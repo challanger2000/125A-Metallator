@@ -34,9 +34,6 @@ public:
         lp3300Coeff_ = pole(3300.0); lp8500Coeff_ = pole(8500.0);
         // Architectural identity: body distribution, excitation mechanism and
         // attack/release morphology selected together, never a global pitch shift.
-        constexpr double impactLength[] = {1.0, .42, 1.8, 1.25};
-        constexpr double percLength[]   = {.12, .35, .22, .53};
-        const double* lengths = engine_ == 0 ? impactLength : percLength;
         maxSamples_ = static_cast<uint64_t>(rate_ * (engine_ == 0 ? 7.0 : 4.0));
         const double attackRate = engine_==0 ? (shape_==0 ? 14.0 : shape_==1 ? 4.5 : shape_==2 ? 28.0 : 6.5) :
                                   (shape_==0 ? 62.0 : shape_==1 ? 30.0 : shape_==2 ? 25.0 : 18.0);
