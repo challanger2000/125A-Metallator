@@ -1,5 +1,5 @@
 #pragma once
-// Four mechanically distinct, atonal industrial sound families; no static samples.
+// Two atonal, sample-free metal percussion families: IMPACT and PERC.
 // The fixed voice implementation is realtime allocation-free and deterministic.
 #include <algorithm>
 #include <array>
@@ -9,12 +9,17 @@
 #include "mechanical_body.h"
 
 namespace MetallatorDSP {
-enum class Engine : unsigned { Impact=0, Perc=1, Friction=2, Drone=3 };
+enum class Engine : unsigned { Impact=0, Perc=1 };
+// Legacy instrument state V1/V2 had four engines. The two retired
+// modes are deliberately migrated, never resurrected in the DSP.
+constexpr Engine migrateStoredEngine(unsigned oldMode) noexcept {
+    return (oldMode == 1 || oldMode == 2) ? Engine::Perc : Engine::Impact;
+}
 static constexpr uint32_t kArchetypeCount = 4;
 struct Patch {
     Engine engine{Engine::Impact};
     double size{0.75}, force{0.80}, chaos{0.55}, decay{0.55};
-    double keyTrack{0.0}; // Preserved compatibility; all current families are atonal.
+    double keyTrack{0.0}; // Legacy state field only; inert and not in the GUI.
     double level{0.68};
     uint32_t seed{0x125A2026u}; // VARIATE: changes microgeometry in current archetype.
     uint32_t archetype{0};       // GENERATE: chooses genuinely different construction.
@@ -49,7 +54,7 @@ public:
     void setPatch(Patch p) noexcept {
         p.size=unit(p.size);p.force=unit(p.force);p.chaos=unit(p.chaos);
         p.decay=unit(p.decay);p.keyTrack=unit(p.keyTrack);p.level=unit(p.level);
-        if(static_cast<unsigned>(p.engine)>3)p.engine=Engine::Impact;
+        if(static_cast<unsigned>(p.engine)>1)p.engine=Engine::Impact;
         p.archetype %= kArchetypeCount;
         if(!p.seed)p.seed=1;
         patch_=p;
@@ -68,25 +73,21 @@ public:
                             scrambled(seed ^ 0x25a4e913u));
             v.maxAge=v.impact.maxSamples();
         } else {
-            const double tracking = v.mode == Engine::Drone ?
-                std::pow(2.0, (double(key)-60.0)/12.0 * patch_.keyTrack) : 1.0;
+            // Keyboard note selects the event, never a forced resonator pitch.
             v.body.start(static_cast<unsigned>(v.mode),v.archetype,rate_,
-                          patch_.size,patch_.force,patch_.chaos,patch_.decay,seed,tracking);
+                          patch_.size,patch_.force,patch_.chaos,patch_.decay,seed);
             v.maxAge=v.body.maxSamples();
         }
     }
     void noteOff(int key,int32_t noteId=-1) noexcept {
         for(auto& v:voices_) {
             if(v.active&&v.key==key&&(noteId<0||v.noteId==noteId)) {
-                v.released=true;
-                if(v.mode==Engine::Drone||v.mode==Engine::Friction)v.body.noteOff();
+                v.released=true; // Percussion tail rings naturally after NoteOff.
             }
         }
     }
-    void allNotesOff() noexcept {
-        for(auto& v:voices_)if(v.active){v.released=true;
-            if(v.mode==Engine::Drone||v.mode==Engine::Friction)v.body.noteOff();}
-    }
+    // Panic operation must stop sound; ordinary NoteOff does not chop percussion tails.
+    void allNotesOff() noexcept { for(auto& v:voices_)v.active=false; }
     int activeVoices() const noexcept {
         int n=0;for(const auto& v:voices_)n+=int(v.active);return n;
     }
@@ -102,9 +103,7 @@ public:
             }
             const double velocity=v.velocity*.75;
             l+=vl*velocity;r+=vr*velocity;
-            if(++v.age>=v.maxAge || (v.released &&
-                (v.mode==Engine::Drone || v.mode==Engine::Friction) &&
-                v.body.tailComplete()))v.active=false;
+            if(++v.age>=v.maxAge)v.active=false;
         }
         const double gain=.26*patch_.level;
         return {softCeiling(l*gain),softCeiling(r*gain)};

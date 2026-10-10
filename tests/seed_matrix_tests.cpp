@@ -13,7 +13,7 @@ int main(){
         0x7ffdf00du, 0x00410311u, 0x01d376e4u, 0x6e19500cu};
     int cases=0;
     for(double sr:{44100.,48000.,96000.,192000.}) {
-        for(unsigned e=0;e<4;++e)for(unsigned shape=0;shape<kArchetypeCount;++shape){
+        for(unsigned e=0;e<2;++e)for(unsigned shape=0;shape<kArchetypeCount;++shape){
             double minPeak=1,maxPeak=0,maxImbalance=0;
             for(uint32_t seed:seeds){
                 Synth s;s.setSampleRate(sr);Patch p;p.engine=static_cast<Engine>(e);

@@ -1,5 +1,5 @@
 // Offline reference generator / waveform export. Shares EXACT DSP with VST3; no DAW required.
-// Usage: metallator_render <impact|perc|friction|drone> <output.wav> [seed] [archetype:0-3]
+// Usage: metallator_render <impact|perc> <output.wav> [seed] [archetype:0-3]
 #include "metal_synth.h"
 #include <algorithm>
 #include <cmath>
@@ -16,13 +16,11 @@ static void le32(std::ofstream& out, uint32_t v) {
     for(unsigned i=0;i<4;++i)out.put(char((v>>(8*i))&255));
 }
 int main(int argc, char** argv) {
-    if(argc < 3) { std::cerr << "Usage: metallator_render <impact|perc|friction|drone> <path.wav> [seed]\n"; return 2; }
+    if(argc < 3) { std::cerr << "Usage: metallator_render <impact|perc> <path.wav> [seed]\n"; return 2; }
     const std::string name=argv[1];
     MetallatorDSP::Engine mode;
     if(name=="impact") mode=MetallatorDSP::Engine::Impact;
     else if(name=="perc") mode=MetallatorDSP::Engine::Perc;
-    else if(name=="friction") mode=MetallatorDSP::Engine::Friction;
-    else if(name=="drone") mode=MetallatorDSP::Engine::Drone;
     else { std::cerr << "Unknown engine\n"; return 2; }
     uint32_t seed=0x125A2026u;
     if(argc>=4) {
@@ -42,13 +40,12 @@ int main(int argc, char** argv) {
     }
     synth.setPatch(patch);
     synth.noteOn(60,1.0,1);
-    // Render through complete bounded tail; sustained types released after 1.3 seconds.
+    // Render percussion one-shot through its complete bounded tail.
     std::vector<int32_t> samples;
     samples.reserve(44100*12);
     double peak=0.0;
     const int maxFrames=44100*32;
     for(int frame=0;frame<maxFrames;++frame) {
-        if(frame==57330 && (mode==MetallatorDSP::Engine::Drone || mode==MetallatorDSP::Engine::Friction)) synth.noteOff(60,1);
         auto s=synth.renderFrame();
         for(double x:s){
             if(!std::isfinite(x)) {std::cerr << "Invalid sample\n"; return 1;}

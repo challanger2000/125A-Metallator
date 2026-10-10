@@ -50,7 +50,7 @@ static double similarity(const Summary& a,const Summary& b) {
     return dot;
 }
 int main(){
-    for(int e=0;e<4;++e){
+    for(int e=0;e<2;++e){
         const auto engine=static_cast<Engine>(e);
         std::array<Summary,kArchetypeCount> outputs{};
         for(unsigned profile=0;profile<kArchetypeCount;++profile) {
@@ -58,7 +58,7 @@ int main(){
             std::cout << "engine=" << e << " archetype=" << profile
                       << " peak=" << outputs[profile].peak
                       << " rms=" << outputs[profile].rms << '\n';
-            // Atonal notes are triggers; keyTrack=0 even for DRONE.
+            // Atonal drum triggers never track keyboard pitch.
             const auto otherKey=render(engine,profile,307896358u,75);
             if(outputs[profile].env!=otherKey.env||
                outputs[profile].rms!=otherKey.rms)

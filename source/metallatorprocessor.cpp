@@ -43,12 +43,12 @@ void Processor::applyValue(ParamID id,ParamValue val) noexcept {
     if(!std::isfinite(val))return;
     const double x=MetallatorDSP::unit(val);
     switch(id) {
-        case kEngineId: values_.patch.engine=static_cast<MetallatorDSP::Engine>(std::clamp(int(std::lround(x*3.0)),0,3)); break;
+        case kEngineId: values_.patch.engine=(x>=0.5) ? MetallatorDSP::Engine::Perc : MetallatorDSP::Engine::Impact; break;
         case kSizeId: values_.patch.size=x; break;
         case kForceId: values_.patch.force=x; break;
         case kChaosId: values_.patch.chaos=x; break;
         case kDecayId: values_.patch.decay=x; break;
-        case kKeyTrackId: values_.patch.keyTrack=x; break;
+        case kKeyTrackId: values_.patch.keyTrack=x; break; // Legacy hidden parameter; no sound effect.
         case kLevelId: values_.patch.level=x; break;
         case kGenerateId:
             if((x>=0.5)!=(values_.generate>=0.5)){

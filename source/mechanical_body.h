@@ -1,5 +1,5 @@
 #pragma once
-// 125A Metallator — mechanically distinct, atonal excitation families.
+// 125A Metallator — atonal mechanical percussion: IMPACT / PERC only.
 // Design model is EMPIRICALLY TUNED, not an acoustic measurement of a real object.
 // All coefficients are established at noteOn; render() is bounded, allocation-free,
 // deterministic and contains neither trigonometric functions nor exponentials.
@@ -16,12 +16,11 @@ public:
     static constexpr double kTau = 6.28318530717958647693;
     struct Stereo { double l{0}, r{0}; };
 
-    // engine: IMPACT (alternative profiles), PERC, FRICTION, DRONE.
+    // engine: IMPACT (alternative profiles) or PERC.
     void start(unsigned engine, unsigned shape, double rate, double size, double force,
-               double chaos, double decay, uint32_t seed,
-               double keyRatio = 1.0) noexcept {
+               double chaos, double decay, uint32_t seed) noexcept {
         *this = {}; // reinitialize full object in-place; no allocations.
-        engine_ = std::min(engine, 3u); shape_ = shape % 4;
+        engine_ = std::min(engine, 1u); shape_ = shape % 4;
         rate_ = std::clamp(rate, 8000.0, 384000.0);
         seed_ = seed ? seed : 0x9e3779b9u;
         // Preserve archetype-level contact timing under VARIATE: a separate
@@ -37,24 +36,16 @@ public:
         // attack/release morphology selected together, never a global pitch shift.
         constexpr double impactLength[] = {1.0, .42, 1.8, 1.25};
         constexpr double percLength[]   = {.12, .35, .22, .53};
-        constexpr double fricLength[]   = {.75, 1.15, 2.3, 1.3};
-        constexpr double droneLength[]  = {8.0, 7.5, 11.0, 10.0};
-        const double* lengths = engine_ == 0 ? impactLength : engine_ == 1 ? percLength :
-                                engine_ == 2 ? fricLength : droneLength;
-        activeSeconds_ = lengths[shape_] * (0.68 + 0.8 * decay_);
-        maxSamples_ = static_cast<uint64_t>(rate_ * (engine_ == 3 ? 28.0 :
-                            engine_ == 2 ? std::max(3.0, activeSeconds_ + 1.2) :
-                            engine_ == 0 ? 7.0 : 4.0));
+        const double* lengths = engine_ == 0 ? impactLength : percLength;
+        maxSamples_ = static_cast<uint64_t>(rate_ * (engine_ == 0 ? 7.0 : 4.0));
         const double attackRate = engine_==0 ? (shape_==0 ? 14.0 : shape_==1 ? 4.5 : shape_==2 ? 28.0 : 6.5) :
                                   (shape_==0 ? 62.0 : shape_==1 ? 30.0 : shape_==2 ? 25.0 : 18.0);
         transientStep_ = std::exp(-attackRate/rate_);
         // The modal body has deliberately different shape-specific band occupancy.
         // Unlike arbitrary base-frequency scaling, the frequency *distribution* changes.
-        constexpr double lowBounds[4][4] = {
+        constexpr double lowBounds[2][4] = {
             {50, 350, 1700, 6900}, // IMPACT
-            {130, 650, 1800, 9500}, // PERC
-            {65, 260, 1300, 8600}, // FRICTION
-            {35, 120, 400, 5400}   // DRONE
+            {130, 650, 1800, 9500} // PERC
         };
         double spectralBias[4][3] = {
             {.40, .22, .38},  // sheet snap: high metal flash
@@ -62,9 +53,8 @@ public:
             {.20, .48, .32},  // braced cage: brighter resonant structure
             {.35, .43, .22}   // thin plate: modal ring
         };
-        const double ratio = std::exp((.58 - size_) * 1.10) * (engine_ == 3 ? keyRatio : 1.0);
-        const double t60 = (engine_ == 0 ? 1.4 : engine_ == 1 ? .13 :
-                           engine_ == 2 ? .18 : .62) * (0.6 + 1.65 * decay_);
+        const double ratio = std::exp((.58 - size_) * 1.10);
+        const double t60 = (engine_ == 0 ? 1.4 : .13) * (0.6 + 1.65 * decay_);
         for (int i = 0; i < kModeCount; ++i) {
             Mode& m = modes_[static_cast<std::size_t>(i)];
             const int band = i < 16 ? 0 : i < 32 ? 1 : 2;
@@ -72,43 +62,27 @@ public:
             const int shiftedBand = engine_ == 0 ?
                 (shape_ == 0 ? (i < 7 ? 0 : i < 27 ? 1 : 2) :
                  shape_ == 1 ? (i < 27 ? 0 : i < 43 ? 1 : 2) :
-                 shape_ == 2 ? (i < 9 ? 0 : i < 32 ? 1 : 2) : band)
-                : engine_ == 1 ?
-                    (shape_ == 0 ? (i < 5 ? 0 : i < 20 ? 1 : 2) :
-                     shape_ == 1 ? (i < 15 ? 0 : i < 31 ? 1 : 2) :
-                     shape_ == 2 ? (i < 25 ? 0 : i < 42 ? 1 : 2) : band)
-                : engine_ == 2 ?
-                    (shape_ == 0 ? (i < 4 ? 0 : i < 17 ? 1 : 2) :
-                     shape_ == 1 ? (i < 27 ? 0 : i < 45 ? 1 : 2) :
-                     shape_ == 2 ? (i < 24 ? 0 : i < 39 ? 1 : 2) :
-                                  (i < 6 ? 0 : i < 23 ? 1 : 2))
-                : (shape_ == 0 ? (i < 12 ? 0 : i < 40 ? 1 : 2) :
-                   shape_ == 1 ? (i < 7 ? 0 : i < 35 ? 1 : 2) :
-                   shape_ == 2 ? (i < 28 ? 0 : i < 43 ? 1 : 2) : band);
+                 shape_ == 2 ? (i < 9 ? 0 : i < 32 ? 1 : 2) : band) :
+                (shape_ == 0 ? (i < 5 ? 0 : i < 20 ? 1 : 2) :
+                 shape_ == 1 ? (i < 15 ? 0 : i < 31 ? 1 : 2) :
+                 shape_ == 2 ? (i < 25 ? 0 : i < 42 ? 1 : 2) : band);
             const double lo = lowBounds[engine_][shiftedBand];
             const double hi = lowBounds[engine_][shiftedBand+1];
             const double frequency = std::clamp(std::exp(std::log(lo) + rand01() * std::log(hi/lo)) *
                 ratio * (1.0 + (rand01()-.5)*chaos_*.08), 25.0, rate_*.43);
             const double phase = kTau * frequency / rate_;
-            // Shorter modal memory for friction, longer for bodies. For drones,
-            // wide distributed resonances deliberately avoid a prominent root tone.
             // A tightly braced massive block dissipates modal energy quickly;
             // a freely suspended sheet holds bending resonances substantially longer.
             // Shape is determined by structure (GENERATE), not by global pitch.
             const double contactDamping = engine_ == 0 && shape_ == 1 ? .32 :
                                           engine_ == 0 && shape_ == 3 ? 1.35 : 1.0;
-            const double damping = t60 * (0.45 + 1.1*rand01()) *
-                                   (engine_ == 2 ? .42 : 1.0) * contactDamping;
+            const double damping = t60 * (0.45 + 1.1*rand01()) * contactDamping;
             const double radius = std::exp(-6.907755278982137 / (rate_ * std::max(.012,damping)));
             m.a1 = 2*radius*std::cos(phase);
             m.a2 = -radius*radius;
             const double bandGain = engine_ == 0 ? spectralBias[shape_][shiftedBand] :
-              engine_ == 1 ? (shape_==2 ? (shiftedBand==0?.85:.19) :
-                              shape_==0 ? (shiftedBand==2?.9:.38) : .49) :
-              engine_ == 2 ? (shape_==2 && shiftedBand==0 ? 1.2 :
-                              shape_==3 && shiftedBand==2 ? 1.0 : .43) :
-                              (shape_==0 && shiftedBand==0 ? 1.4 :
-                               shape_==1 && shiftedBand==1 ? 1.1 : .50);
+                (shape_ == 2 ? (shiftedBand == 0 ? .85 : .19) :
+                 shape_ == 0 ? (shiftedBand == 2 ? .9 : .38) : .49);
             m.weight = bandGain * (0.45 + rand01() * .55) / std::sqrt(double(kModeCount));
             m.pan = (rand01() - 0.5) * .29;
             m.inputScale = (1.0 - radius) * 2.1; // constant-noise stationary energy scaling.
@@ -124,15 +98,10 @@ public:
         // not pitch-derived. A natural rattle is not a tempo-synced echo.
         countdown_ = 0;
         eventLevel_ = engine_ == 1 && shape_ == 1 ? 0.0 : .85;
-        eventDecay_ = std::exp(-(engine_ == 1 ? 160.0 : engine_ == 0 ? 110.0 :
-                                      engine_ == 2 ? 90.0 : 8.0) / rate_);
-        if (engine_ == 3) releaseRate_ = std::exp(-6.907755278982137/(rate_*(.35 + 2.3*decay_)));
-        else releaseRate_ = std::exp(-6.907755278982137/(rate_*(.09 + .38*decay_)));
+        eventDecay_ = std::exp(-(engine_ == 1 ? 160.0 : 110.0) / rate_);
     }
 
-    void noteOff() noexcept { released_ = true; }
     uint64_t maxSamples() const noexcept { return maxSamples_; }
-    bool tailComplete() const noexcept { return released_ && release_ < 1e-5; }
     Stereo render() noexcept {
         const double t = static_cast<double>(age_) / rate_;
         const double noise = 2.0*rand01() - 1.0;
@@ -140,7 +109,6 @@ public:
         l700_ = lp700Coeff_ * l700_ + (1.-lp700Coeff_) * noise;
         l3300_ = lp3300Coeff_ * l3300_ + (1.-lp3300Coeff_) * noise;
         l8500_ = lp8500Coeff_ * l8500_ + (1.-lp8500Coeff_) * noise;
-        const double sub = l120_;
         const double body = l700_ - l120_;
         const double upper = l3300_ - l700_;
         const double grit = l8500_ - l3300_;
@@ -195,72 +163,7 @@ public:
                 texture = .22*body + .60*upper + .35*grit;
                 excite = .30*texture*mod;
             }
-        } else if (engine_ == 2) {
-            const double end = activeSeconds_;
-            // Friction decays after contact ends; no flute-like pure sine driver.
-            const double on = attack(t,.014);
-            const double off = std::clamp((end-t)/.08,0.0,1.0);
-            if (shape_ == 0) { // jagged heavy rasp, sparse coarse stick-slip packets
-                if (!countdown_ && t < end) {
-                    eventLevel_ += .35+.70*randEvent();
-                    countdown_ = static_cast<uint32_t>(rate_*(.004 + .019*randEvent()));
-                }
-                if(countdown_) --countdown_;
-                mod = on * off * (.15+.85*eventLevel_);
-                texture = .08*body + .79*upper + .56*grit;
-            } else if (shape_ == 1) { // ripping galvanized sheet, larger irregular tears
-                if (!countdown_ && t < end) {
-                    eventLevel_ += .45+.85*randEvent();
-                    countdown_ = static_cast<uint32_t>(rate_*(.038 + .10*randEvent()));
-                }
-                if(countdown_) --countdown_;
-                mod = on*off*(.06 + 1.15*eventLevel_);
-                texture = 1.12*body + .22*upper + .02*grit;
-            } else if (shape_ == 2) { // heavy metal-on-metal drag: denser low rumbling pressure
-                if (!countdown_ && t < end) {
-                    eventLevel_ += .32 + .50*randEvent();
-                    countdown_ = static_cast<uint32_t>(rate_*(.018+.11*randEvent()));
-                }
-                if(countdown_) --countdown_;
-                mod = attack(t,.20)*off*(.3 + .7*eventLevel_);
-                texture = .55*body + .85*upper + .12*grit;
-            } else { // welding-like stressed squeal: abrasive high band, still atonal
-                if (!countdown_ && t < end) {
-                    eventLevel_ += .18 + .20*randEvent();
-                    countdown_ = static_cast<uint32_t>(rate_*(.003 + .010*randEvent()));
-                }
-                if(countdown_) --countdown_;
-                mod = on*off*(.25 + .5*eventLevel_);
-                texture = .45*body + .92*upper + .55*grit + .08*high;
-            }
-            excite = .38*mod*texture;
-        } else { // engine_ == 3, huge metallic soundscapes (not just broadband noise).
-            const double rise = shape_ == 2 ? 1.9 : shape_ == 0 ? .48 : .9;
-            const double on = attack(t,rise);
-            // Two distinct continuous excitation families: droning body and contact
-            // events. These have independent event contours, no audible oscillator root.
-            if (!countdown_) {
-                const double gap = shape_ == 0 ? .23 : shape_ == 1 ? .13 : shape_ == 2 ? .62 : .085;
-                eventLevel_ += .35 + .50*randEvent();
-                countdown_ = static_cast<uint32_t>(rate_ * gap*(.65 + .85*randEvent()));
-            }
-            if(countdown_) --countdown_;
-            if (shape_ == 0) { // colossal steel-body resonance
-                mod = on * (.50 + .16*eventLevel_);
-                texture = .11*sub + .75*body + 2.6*upper;
-            } else if (shape_ == 1) { // large stressed sheet, brighter moving body
-                mod = on * (.27 + .35*eventLevel_);
-                texture = .90*body + 1.20*upper + .17*grit;
-            } else if (shape_ == 2) { // pneumatic pressure wall, slow swelling structure
-                mod = on * (.72 + .07*eventLevel_);
-                texture = 1.7*sub + 2.15*body + .08*upper;
-            } else { // corroded motor assembly, quick irregular vibration cycles
-                mod = on * (.17 + .6*eventLevel_);
-                texture = .75*body + 1.07*upper + .21*grit;
-            }
-            excite = .52*mod*texture;
         }
-        if (released_ && (engine_ == 2 || engine_ == 3)) release_ *= releaseRate_;
         // A suspended plate transfers energy into broad bending modes gradually
         // after the initial contact; the dry contact noise remains instantaneous.
         // This is an onset/bloom of the SAME impact, not an echo or retrigger.
@@ -273,24 +176,18 @@ public:
             m.previous = m.current;
             m.current = std::abs(y)<1e-28 ? 0.0 : y;
             // Structural modes form the audible body; direct noise is only contact.
-            const double bodyBoost = engine_==0 ? 5.0 : engine_==1 ? 4.0 :
-                                     engine_==2 ? 1.5 : 3.5;
+            const double bodyBoost = engine_ == 0 ? 5.0 : 4.0;
             const double g = bodyBoost * modalOnset * m.weight * m.current;
             l += g*(1.0-m.pan);
             r += g*(1.0+m.pan);
         }
-        const double direct = (engine_ == 0 ? .40 : engine_ == 1 ? .41 :
-                               engine_ == 2 ? .24 : .10) * texture * mod;
+        const double direct = (engine_ == 0 ? .40 : .41) * texture * mod;
         // Fixed per-archetype gain calibration compensates distinct body mechanisms;
         // it does not normalize every hit in realtime or disguise mere seed changes.
         constexpr double impactGains[] = {1.0, 2.5, 6.3, 6.0};
         constexpr double percGains[]   = {1.9, 2.2, 1.15, 2.0};
-        constexpr double fricGains[]   = {1.9, 1.05, .55, 2.7};
-        constexpr double droneGains[]  = {2.2, 4.7, 1.25, 5.4};
-        const double cal = engine_==0 ? impactGains[shape_] : engine_==1 ? percGains[shape_]
-                         : engine_==2 ? fricGains[shape_] : droneGains[shape_];
-        const double global = cal * (engine_==0 ? 1.6 : engine_==1 ? 6.5 :
-                              engine_==2 ? 4.4 : 1.3) * force_ * release_;
+        const double cal = engine_ == 0 ? impactGains[shape_] : percGains[shape_];
+        const double global = cal * (engine_ == 0 ? 1.6 : 6.5) * force_;
         const double tail = std::clamp((double(maxSamples_-std::min(age_,maxSamples_))/rate_)/.045,0.0,1.0);
         ++age_;
         transient_ *= transientStep_;
@@ -305,14 +202,13 @@ private:
     double pole(double f) const noexcept { return std::exp(-kTau*std::min(f,rate_*.46)/rate_); }
     static double attack(double t,double seconds) noexcept { return std::clamp(t/std::max(.0001,seconds),0.0,1.0); }
     std::array<Mode,kModeCount> modes_{};
-    double rate_{44100},force_{.8},chaos_{.5},size_{.5},decay_{.5},activeSeconds_{1};
+    double rate_{44100},force_{.8},chaos_{.5},size_{.5},decay_{.5};
     double lp120Coeff_{0},lp700Coeff_{0},lp3300Coeff_{0},lp8500Coeff_{0};
     double l120_{0},l700_{0},l3300_{0},l8500_{0};
-    double eventLevel_{0},eventDecay_{.999},release_{1},releaseRate_{.999};
+    double eventLevel_{0},eventDecay_{.999};
     double transient_{1.0},transientStep_{.999};
     uint32_t seed_{1},eventSeed_{0x263A92B1u},countdown_{0};
     uint64_t age_{0},maxSamples_{1};
     unsigned engine_{0},shape_{0};
-    bool released_{false};
 };
 } // namespace MetallatorDSP

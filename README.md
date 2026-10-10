@@ -1,62 +1,37 @@
-# 125A Metallator V1 — Generative Industrial Percussion Synth
+# 125A Metallator V1 — Metal Percussion Instrument (development)
 
-Early development of a **new VST3 instrument**, not an update to the old audio-input Metallator effect. The former experiment was retired; its class IDs, parameters and audio effect architecture are not reused.
+**Target:** synthetic metallic drum replacements for Industrial / NDH / Metal.
+This is a focused percussion instrument, **not** a generic metal ambience or drone synthesizer.
 
-## Current status
+## Current active engines
 
-**Offline sound-design candidate with structural GENERATE and VARIATE. NOT release-ready.** No custom GUI and no in-plugin WAV export yet. The native CLI reference exporter uses the exact same DSP and writes 44,100 Hz / 24-bit PCM / stereo WAVs with bounded complete tails. VST3 plugin presents controls through host generic parameter editors until the custom GUI is built.
+- **IMPACT:** big atonal metal impacts for heavy kick/snare/tom-like accents and massive hits. One initial strike, no tempo echoes or additional staged impact triggers. Four constructions: the earlier approved 84-mode steel hit, steel block, steel cage, suspended plate.
+- **PERC:** atonal, short/medium metal percussion: ticks, rattling chain links, sheet clicks and industrial ratchets. Four constructions.
 
-## Sound families
+**FRICTION and DRONE have been removed from both the real-time audio engine and the instrument editor.** No sustaining drone, scraping/pitch oscillator or pitch-tracking mode is available. All MIDI notes trigger sound events without musical pitch. NoteOff does not kill the percussive tail; allNotesOff is a panic operation. Multiple MIDI notes can overlap.
 
-- **IMPACT:** one heavy steel strike with 84 independently decaying, inharmonic modes;
-  a broadband contact bite and a decaying, unpitched pressure wave. **No synthetic
-  secondary collisions, tempo echoes or rebound sequences.** Seed changes body
-  geometry and modal spectrum. FORCE 0% is silent. This new design is still under
-  listening review, and is not a physically calibrated steel simulation.
-- **PERC:** four different hit/chain-link/sheet/ratchet constructions, not a pitch-shifted standard cymbal.
-- **FRICTION:** rasp, tearing contact, slow metal drag and abrasive stressed contact; no forced musical pitch.
-- **DRONE:** massive body, stressed plate, slow pressure and irregular motor structures; optional pitched modes only when enabled.
+GENERATE cycles a new structural archetype within IMPACT/PERC, VARIATE changes the chosen archetype's microgeometry. No promise of an unlimited sound vocabulary: currently 8 built-in archetypes, under sonic development.
 
-No sampled source audio. Each engine contains four structurally different archetypes. GENERATE changes archetype; VARIATE changes microgeometry within that archetype. See [technical evidence](docs/GENERATIVE-ARCHITECTURE.md). Sounds are generated deterministically from algorithm, preset parameters, archetype and seed. MIDI note-on fires a voice; percussive voice tails run independently of note-off; drone/friction respond to note-off with a release. Twelve polyphonic voices with deterministic voice stealing. MIDI event offsets are processed at the exact sample frame, as are registered VST3 automation queues.
+## Project/state compatibility
 
-## Controls and operation
+Existing stable VST3 processor/controller class IDs and parameter IDs are retained. State schema V3 reads V1/V2/V3.
+- Old engine 0 IMPACT → IMPACT.
+- Old engine 1 PERC → PERC.
+- Old engine 2 FRICTION → PERC (replaced; cannot faithfully reproduce old audio).
+- Old engine 3 DRONE → IMPACT (replaced; cannot faithfully reproduce old audio).
+- Legacy key-track parameter ID 1005 and serialized field are retained for state compatibility but are **hidden/inert**. Engine selector offers exactly two entries.
+- DAW automation lanes recorded with the former *four-position* ENGINE normalized scale require manual review; the new two-position mapping intentionally changes that range in this unreleased prototype. No claim of full audio or automation backward compatibility.
 
-ENGINE, SIZE, FORCE, CHAOS, DECAY, DRONE KEY TRACK, LEVEL, GENERATE (toggle), VARIATE (toggle), Bypass. The generic host switches are toggles: **either edge** regenerates the seed.
-The change is heard on the **next MIDI Note On**; holding a note does not restart
-an existing metallic tail. Trigger another note after using GENERATE / VARIATE. The seed and archetype are saved with the project for repeatable results; state V2 can load the original state V1 format. A future GUI will expose normal buttons, sound audition, favorites and a safe explicit WAV export action outside the audio callback.
+## Status and next work
 
-## Development toolchain
+This is an internal DSP-focused development branch. A professional 125A GUI, preset workflow, working export, exact host lifecycle/state tests, sound design and true realtime qualification are **OPEN**. No user testing required until a significantly more finished instrument with a proper GUI exists.
 
-Steinberg VST3 SDK **3.8.1**, pinned by `v3.8.1_build_84`; CMake 3.25+, C++20, Windows x64 build via GitHub Actions.
+Source of truth: `challanger2000/125A-Engineering/START-HERE.md`; 125A logo/knobs must come from the Branding and Knob Designer master repositories. GUI static design FIRST, then VSTGUI.
 
-```
-cmake -S . -B build -DMETALLATOR_BUILD_VST3=OFF -DBUILD_TESTING=ON
-cmake --build build
-ctest --test-dir build --output-on-failure
-./build/metallator_render impact impact.wav 307896358 0
-./build/metallator_render friction friction-rip.wav 307896358 1
-```
+## Local verification (no GitHub Actions required)
 
-These commands compile the SDK-independent core and reference exporter locally. VST3 build uses `-DMETALLATOR_BUILD_VST3=ON` and downloads the pinned SDK.
+`cmake -S . -B build -DMETALLATOR_BUILD_VST3=OFF -DBUILD_TESTING=ON` 
+`cmake --build build --config Release` 
+`ctest --test-dir build --output-on-failure`
 
-## Impact rebuild / single-strike QA (development only)
-
-The replacement IMPACT synthesizer was derived from the independently scripted
-`01_Stahltraeger_Kollision.wav` experiment, keeping its distinct low/mid/high
-modal bands and contact/pressure excitation. The separate echo-like rebounds,
-loose-debris impacts, artificial room reflections and offline nonlinear mastering
-were deliberately **not** ported. Resonant modal physics, exponential T60 and
-bounded oscillator recursion are documented/derived; modal frequency spread,
-mechanical sound design and output voicing are **EMPIRICALLY TUNED**.
-
-The core test suite now uses checks that execute in **Release** builds (unlike
-ordinary C++ `assert` under `NDEBUG`). A separate IMPACT contract test verifies
-sample rates, long-lasting body, force response, atonal MIDI triggers, 0% FORCE
-silence, output bounds and deterministic seed changes. The full host and sonic
-release gates remain OPEN.
-
-## Pending release gates
-
-Structural C++ offline QA passed locally, but real audio listening is OPEN. Sound-quality review in musical NDH/Industrial arrangements; level-matched diversity and transient measurements; VST3 Validator; 125A QA (event I/O, state restoration, lifecycle, offline/realtime, extreme automation and Editor Lifecycle once GUI exists); actual DAW tests; full WAV export integration; readable 100/150% GUI.
-
-All 125A development follows `challanger2000/125A-Engineering/START-HERE.md`.
+No Windows/Studio One or sonically approved release claim is implied by offline tests.

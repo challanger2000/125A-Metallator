@@ -61,7 +61,7 @@ int main() {
             REQUIRE(impact.peak <= .98);
         }
         // Other engines use mid/side internally and must retain correct stereo output.
-        for (auto family : {Engine::Perc, Engine::Friction, Engine::Drone}) {
+        for (auto family : {Engine::Perc}) {
             const auto other = measure(rate, family, seeds[0]);
             if (std::abs(other.imbalanceDb) > 3.0)
                 fail("NONIMPACT ABS(L-R) <= 3 dB", __LINE__, other.imbalanceDb);

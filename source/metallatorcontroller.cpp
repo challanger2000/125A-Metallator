@@ -8,13 +8,13 @@ tresult PLUGIN_API Controller::initialize(FUnknown* ctx){
     if(result!=kResultOk)return result;
     auto* engine=new StringListParameter(STR16("ENGINE"),kEngineId);
     engine->appendString(STR16("IMPACT"));engine->appendString(STR16("PERC"));
-    engine->appendString(STR16("FRICTION"));engine->appendString(STR16("DRONE"));
     parameters.addParameter(engine);
     parameters.addParameter(STR16("SIZE"),STR16("%"),0,0.75,ParameterInfo::kCanAutomate,kSizeId);
     parameters.addParameter(STR16("FORCE"),STR16("%"),0,0.80,ParameterInfo::kCanAutomate,kForceId);
     parameters.addParameter(STR16("CHAOS"),STR16("%"),0,0.55,ParameterInfo::kCanAutomate,kChaosId);
     parameters.addParameter(STR16("DECAY"),STR16("%"),0,0.55,ParameterInfo::kCanAutomate,kDecayId);
-    parameters.addParameter(STR16("DRONE KEY TRACK"),STR16("%"),0,0.0,ParameterInfo::kCanAutomate,kKeyTrackId);
+    // Retain legacy parameter ID and state layout, but do not expose dead control in the UI.
+    parameters.addParameter(STR16("LEGACY KEY TRACK"),STR16("%"),0,0.0,ParameterInfo::kIsHidden,kKeyTrackId);
     parameters.addParameter(STR16("LEVEL"),STR16("%"),0,0.68,ParameterInfo::kCanAutomate,kLevelId);
     // Generic host editor: toggling either switch regenerates. Native pushbuttons follow in the GUI stage.
     parameters.addParameter(STR16("GENERATE (toggle)"),nullptr,1,0,ParameterInfo::kCanAutomate,kGenerateId);
@@ -25,7 +25,7 @@ tresult PLUGIN_API Controller::initialize(FUnknown* ctx){
 tresult PLUGIN_API Controller::setComponentState(IBStream* state){
     StateCodec::Values v;
     if(!StateCodec::read(state,v))return kResultFalse;
-    setParamNormalized(kEngineId,static_cast<int>(v.patch.engine)/3.0);
+    setParamNormalized(kEngineId,static_cast<int>(v.patch.engine));
     setParamNormalized(kSizeId,v.patch.size);
     setParamNormalized(kForceId,v.patch.force);
     setParamNormalized(kChaosId,v.patch.chaos);

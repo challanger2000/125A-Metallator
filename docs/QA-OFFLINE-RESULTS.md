@@ -1,3 +1,5 @@
+> **HISTORICAL — previous four-engine sound-design research, not the current product specification.** See [FOCUS-2026-10-10.md](FOCUS-2026-10-10.md).
+
 # Local evidence — Metallator structural sound design
 
 Date: 2026-10-10. **Pre-release research ONLY; no Windows VST3 build triggered for this branch.**

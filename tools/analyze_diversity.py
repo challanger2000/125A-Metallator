@@ -1,5 +1,5 @@
 """Independent post-render spectral/envelope diagnostic (numpy/scipy/soundfile).
-Usage: python tools/analyze_diversity.py <directory-of-16-WAVs>
+Usage: python tools/analyze_diversity.py <directory-of-8-WAVs>
 Thresholds are in tests/diversity_contract_tests.cpp, not tuned here.
 """
 import sys
@@ -12,7 +12,7 @@ from scipy.signal import welch
 if len(sys.argv) != 2:
     raise SystemExit('Usage: python tools/analyze_diversity.py <wav-folder>')
 folder=Path(sys.argv[1])
-for family in ('impact','perc','friction','drone'):
+for family in ('impact','perc'):
     envs=[];spectra=[]
     for index in range(4):
         x,sr=sf.read(folder/f'{family}_Klangtyp_{index}.wav',always_2d=True)

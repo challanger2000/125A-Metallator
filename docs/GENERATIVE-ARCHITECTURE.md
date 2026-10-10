@@ -1,3 +1,5 @@
+> **HISTORICAL — previous four-engine sound-design research, not the current product specification.** See [FOCUS-2026-10-10.md](FOCUS-2026-10-10.md).
+
 # Metallator V1 — Structural GENERATE / bounded VARIATE (10 Oct 2026)
 
 Status: **offline C++ sound-design candidate**, **NOT** VST3 / DAW / musical approval.

@@ -4,7 +4,7 @@
 #include "pluginterfaces/base/ibstream.h"
 #include <cmath>
 namespace Steinberg::Vst::Metallator::StateCodec {
-static constexpr int32 kVersion=2;
+static constexpr int32 kVersion=3;
 struct Values {
     MetallatorDSP::Patch patch {};
     double generate {0.0};
@@ -16,7 +16,7 @@ inline bool read(IBStream* stream, Values& dest) {
     IBStreamer reader(stream, kLittleEndian);
     int32 version=0, mode=0, seed=0, bypass=0;
     float size=0, force=0, chaos=0, decay=0, keyTrack=0, level=0, generate=0, variate=0;
-    if(!reader.readInt32(version)||(version!=1&&version!=kVersion)||!reader.readInt32(mode)||
+    if(!reader.readInt32(version)||(version!=1&&version!=2&&version!=kVersion)||!reader.readInt32(mode)||
        !reader.readFloat(size)||!reader.readFloat(force)||!reader.readFloat(chaos)||
        !reader.readFloat(decay)||!reader.readFloat(keyTrack)||!reader.readFloat(level)||
        !reader.readInt32(seed)||!reader.readFloat(generate)||!reader.readFloat(variate)||
@@ -30,7 +30,9 @@ inline bool read(IBStream* stream, Values& dest) {
        !inRange(size)||!inRange(force)||!inRange(chaos)||!inRange(decay)||
        !inRange(keyTrack)||!inRange(level)||!inRange(generate)||!inRange(variate))return false;
     Values v;
-    v.patch.engine=static_cast<MetallatorDSP::Engine>(mode);
+    // Explicit migration: retired FRICTION (2) maps to PERC;
+    // retired DRONE (3) maps to IMPACT. Keep legacy IDs/field order intact.
+    v.patch.engine = MetallatorDSP::migrateStoredEngine(static_cast<unsigned>(mode));
     v.patch.size=size;v.patch.force=force;v.patch.chaos=chaos;
     v.patch.decay=decay;v.patch.keyTrack=keyTrack;v.patch.level=level;
     v.patch.seed=static_cast<uint32_t>(seed);

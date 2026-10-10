@@ -33,8 +33,8 @@ std::vector<double> render(Engine mode, uint32_t seed, int key=60, int partition
 }
 
 int main() {
-    std::array<std::vector<double>,4> bank;
-    for(int m=0;m<4;++m) {
+    std::array<std::vector<double>,2> bank;
+    for(int m=0;m<2;++m) {
         bank[m]=render(static_cast<Engine>(m), 0x125A3030u);
         const auto same=render(static_cast<Engine>(m), 0x125A3030u, 60, 127);
         CHECK(bank[m]==same);  // exact stream-partition independence
@@ -49,20 +49,19 @@ int main() {
                   << " differentSeedRMS=" << std::sqrt(difference/bank[m].size()) << "\n";
         CHECK(std::sqrt(energy/bank[m].size())>0.0001); // audible signal; no verdict on musical quality
         // Atonal engines do not derive their pitch from MIDI key.
-        if(m<3) { const auto otherKey=render(static_cast<Engine>(m), 0x125A3030u, 72);
+        { const auto otherKey=render(static_cast<Engine>(m), 0x125A3030u, 72);
             // Trigger key does not change an atonal event (when sequence and seed match).
             CHECK(otherKey==bank[m]);
         }
     }
-    for(int i=0;i<4;++i) for(int j=i+1;j<4;++j) {
+    for(int i=0;i<2;++i) for(int j=i+1;j<2;++j) {
         double diff=0;
         for(size_t k=0;k<bank[i].size();++k) diff+=std::pow(bank[i][k]-bank[j][k],2);
         CHECK(diff>1.e-6);
     }
-    Synth s; s.setSampleRate(44100); Patch p; p.engine=Engine::Drone; p.keyTrack=1.0;
-    s.setPatch(p); s.noteOn(60, 1); for(int i=0;i<100;++i) s.renderFrame();
-    s.noteOff(60); for(int i=0;i<44100*6 && s.activeVoices();++i) s.renderFrame();
-    CHECK(s.activeVoices()==0);
+    // For one-shot metal percussion, NoteOff does not chop the resonant tail.
+    const auto beforeRelease=render(Engine::Impact,0x12345u);
+    CHECK(!beforeRelease.empty());
     CHECK(nextGeneration(0x125A2026u)!=0x125A2026u);
     // Stress all 12 voices, extreme controls and common host sample rates.
     for(double rate : {44100.0,48000.0,96000.0,192000.0}) {
@@ -81,19 +80,20 @@ int main() {
         crowded.reset();
         CHECK(crowded.activeVoices()==0);
     }
-    // Key tracking is opt-in and applies only to the pitched DRONE resonances.
-    const auto droneA=render(Engine::Drone,0x12345u,48);
-    const auto droneB=render(Engine::Drone,0x12345u,72);
-    CHECK(droneA==droneB); // Key tracking off by default.
-    Synth keyed1,keyed2; keyed1.setSampleRate(44100);keyed2.setSampleRate(44100);
-    Patch keyedPatch; keyedPatch.engine=Engine::Drone; keyedPatch.keyTrack=1.0;
-    keyed1.setPatch(keyedPatch);keyed2.setPatch(keyedPatch);
-    keyed1.noteOn(48,1);keyed2.noteOn(72,1);
-    double tunedDifference=0.0;
-    for(int i=0;i<44100;++i) {
-        const double delta=keyed1.renderFrame()[0]-keyed2.renderFrame()[0];
-        tunedDifference+=delta*delta;
-    }
-    CHECK(tunedDifference>1.e-6);
+    // Legacy tracking has no effect on atonal percussion, even when old state sets 100%.
+    Synth legacy1,legacy2;
+    Patch k; k.engine=Engine::Perc; k.keyTrack=1.; k.seed=0x12345u;
+    legacy1.setPatch(k); k.keyTrack=0.; legacy2.setPatch(k);
+    legacy1.noteOn(48,1);legacy2.noteOn(72,1);
+    for(int i=0;i<20000;++i)CHECK(legacy1.renderFrame()==legacy2.renderFrame());
+    // Panic clears all voices; ordinary NoteOff preserves percussion tails.
+    Synth p; p.noteOn(60,1.); CHECK(p.activeVoices()==1);
+    p.noteOff(60); CHECK(p.activeVoices()==1);
+    p.allNotesOff(); CHECK(p.activeVoices()==0);
+    // V1/V2 legacy state migrations to the two remaining metal-drum engines.
+    CHECK(migrateStoredEngine(0)==Engine::Impact);
+    CHECK(migrateStoredEngine(1)==Engine::Perc);
+    CHECK(migrateStoredEngine(2)==Engine::Perc);
+    CHECK(migrateStoredEngine(3)==Engine::Impact);
     std::cout << "Core DSP QA PASS\n";
 }

@@ -8,7 +8,7 @@ using namespace MetallatorDSP;
 using Clock=std::chrono::steady_clock;
 int main(){
     constexpr int block=64,blocks=2800;
-    for(unsigned eng=0;eng<4;++eng)for(unsigned shape=0;shape<4;++shape){
+    for(unsigned eng=0;eng<2;++eng)for(unsigned shape=0;shape<4;++shape){
         Synth s;s.setSampleRate(48000);
         Patch p;p.engine=static_cast<Engine>(eng);p.archetype=shape;p.seed=0x125A2026u;
         s.setPatch(p);
