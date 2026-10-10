@@ -52,16 +52,16 @@ void Processor::applyValue(ParamID id,ParamValue val) noexcept {
         case kLevelId: values_.patch.level=x; break;
         case kGenerateId:
             if((x>=0.5)!=(values_.generate>=0.5)){
-                // Toggle from either position: every click produces a new repeatable sound.
-                values_.patch.seed=MetallatorDSP::nextGeneration(values_.patch.seed)&0x7fffffffu;
-                if(values_.patch.seed==0)values_.patch.seed=1;
+                // GENERATE cycles a genuinely different mechanical archetype.
+                // Seed additionally changes construction microgeometry; no MIDI pitch mapping.
+                MetallatorDSP::generateNewStructure(values_.patch);
             }
             values_.generate=x;
             break;
         case kVariateId:
             if((x>=0.5)!=(values_.variate>=0.5)) {
-                values_.patch.seed=MetallatorDSP::nextGeneration(values_.patch.seed^0xA11CE5u)&0x7fffffffu;
-                if(values_.patch.seed==0)values_.patch.seed=1;
+                // VARIATE must preserve the selected archetype and only change details.
+                MetallatorDSP::variateStructure(values_.patch);
             }
             values_.variate=x;
             break;

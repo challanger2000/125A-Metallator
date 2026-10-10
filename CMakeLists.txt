@@ -14,6 +14,12 @@ add_test(NAME metallator_impact_contract COMMAND metallator_impact_contract)
 add_executable(metallator_stereo_contract tests/stereo_contract_tests.cpp)
 target_include_directories(metallator_stereo_contract PRIVATE source)
 add_test(NAME metallator_stereo_contract COMMAND metallator_stereo_contract)
+add_executable(metallator_diversity_contract tests/diversity_contract_tests.cpp)
+target_include_directories(metallator_diversity_contract PRIVATE source)
+add_test(NAME metallator_diversity_contract COMMAND metallator_diversity_contract)
+add_executable(metallator_seed_matrix tests/seed_matrix_tests.cpp)
+target_include_directories(metallator_seed_matrix PRIVATE source)
+add_test(NAME metallator_seed_matrix COMMAND metallator_seed_matrix)
 add_executable(metallator_render tools/offline_render.cpp)
 target_include_directories(metallator_render PRIVATE source)
 
@@ -32,6 +38,7 @@ if(METALLATOR_BUILD_VST3)
     smtg_add_vst3plugin(125A_Metallator
         source/metal_synth.h
         source/impact_body.h
+        source/mechanical_body.h
         source/metallatorids.h
         source/metallatorstate.h
         source/metallatorcontroller.h

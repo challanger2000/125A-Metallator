@@ -7,7 +7,7 @@
 #include <iostream>
 #include <vector>
 using namespace MetallatorDSP;
-// CHECK(...) is compiled out with NDEBUG in Release/CI. CHECK never is.
+// Unlike assert(...), CHECK(...) is still active in Release/CI.
 [[noreturn]] void failed(const char* expression, int line) {
     std::cerr << "DSP CHECK FAILED line " << line << ": " << expression << "\n";
     std::exit(1);

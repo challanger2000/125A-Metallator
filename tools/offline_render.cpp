@@ -1,5 +1,5 @@
 // Offline reference generator / waveform export. Shares EXACT DSP with VST3; no DAW required.
-// Usage: metallator_render <impact|perc|friction|drone> <output.wav> [seed]
+// Usage: metallator_render <impact|perc|friction|drone> <output.wav> [seed] [archetype:0-3]
 #include "metal_synth.h"
 #include <algorithm>
 #include <cmath>
@@ -34,15 +34,21 @@ int main(int argc, char** argv) {
     MetallatorDSP::Patch patch;
     patch.engine=mode;
     patch.seed=seed;
+    if(argc>=5){
+        try {const auto profile=std::stoul(argv[4]);
+            if(profile>=MetallatorDSP::kArchetypeCount)throw std::out_of_range("archetype");
+            patch.archetype=static_cast<uint32_t>(profile);
+        }catch(...) {std::cerr<<"Invalid archetype (0-3)\n";return 2;}
+    }
     synth.setPatch(patch);
     synth.noteOn(60,1.0,1);
-    // Render through complete bounded tail, with DRONE NoteOff after 1 second.
+    // Render through complete bounded tail; sustained types released after 1.3 seconds.
     std::vector<int32_t> samples;
-    samples.reserve(44100*4);
+    samples.reserve(44100*12);
     double peak=0.0;
     const int maxFrames=44100*32;
     for(int frame=0;frame<maxFrames;++frame) {
-        if(frame==44100 && mode==MetallatorDSP::Engine::Drone) synth.noteOff(60,1);
+        if(frame==57330 && (mode==MetallatorDSP::Engine::Drone || mode==MetallatorDSP::Engine::Friction)) synth.noteOff(60,1);
         auto s=synth.renderFrame();
         for(double x:s){
             if(!std::isfinite(x)) {std::cerr << "Invalid sample\n"; return 1;}
@@ -65,5 +71,5 @@ int main(int argc, char** argv) {
         out.put(char(w&255));out.put(char((w>>8)&255));out.put(char((w>>16)&255));
     }
     if(!out){std::cerr<<"WAV write failed\n";return 1;}
-    std::cout<<name<<" frames="<<(samples.size()/2)<<" peak="<<peak<<" seed="<<seed<<"\n";
+    std::cout<<name<<" frames="<<(samples.size()/2)<<" peak="<<peak<<" seed="<<seed<<" archetype="<<patch.archetype<<"\n";
 }
