@@ -20,6 +20,8 @@ add_test(NAME metallator_diversity_contract COMMAND metallator_diversity_contrac
 add_executable(metallator_seed_matrix tests/seed_matrix_tests.cpp)
 target_include_directories(metallator_seed_matrix PRIVATE source)
 add_test(NAME metallator_seed_matrix COMMAND metallator_seed_matrix)
+add_executable(metallator_bench_core tools/bench_core.cpp)
+target_include_directories(metallator_bench_core PRIVATE source)
 add_executable(metallator_render tools/offline_render.cpp)
 target_include_directories(metallator_render PRIVATE source)
 
