@@ -255,6 +255,10 @@ public:
             excite = .52*mod*texture;
         }
         if (released_ && (engine_ == 2 || engine_ == 3)) release_ *= releaseRate_;
+        // A suspended plate transfers energy into broad bending modes gradually
+        // after the initial contact; the dry contact noise remains instantaneous.
+        // This is an onset/bloom of the SAME impact, not an echo or retrigger.
+        const double modalOnset = (engine_ == 0 && shape_ == 3) ? attack(t, .09) : 1.0;
         // Side channel is constructed from independently scattered modal pans,
         // without a second Mid/Side conversion downstream.
         double l=0.0, r=0.0;
@@ -265,7 +269,7 @@ public:
             // Structural modes form the audible body; direct noise is only contact.
             const double bodyBoost = engine_==0 ? 5.0 : engine_==1 ? 4.0 :
                                      engine_==2 ? 1.5 : 3.5;
-            const double g = bodyBoost * m.weight * m.current;
+            const double g = bodyBoost * modalOnset * m.weight * m.current;
             l += g*(1.0-m.pan);
             r += g*(1.0+m.pan);
         }
