@@ -8,6 +8,9 @@ include(CTest)
 add_executable(metallator_core_tests tests/core_tests.cpp)
 target_include_directories(metallator_core_tests PRIVATE source)
 add_test(NAME metallator_core COMMAND metallator_core_tests)
+add_executable(metallator_impact_contract tests/impact_contract_tests.cpp)
+target_include_directories(metallator_impact_contract PRIVATE source)
+add_test(NAME metallator_impact_contract COMMAND metallator_impact_contract)
 add_executable(metallator_render tools/offline_render.cpp)
 target_include_directories(metallator_render PRIVATE source)
 
@@ -25,6 +28,7 @@ if(METALLATOR_BUILD_VST3)
     FetchContent_MakeAvailable(vst3sdk)
     smtg_add_vst3plugin(125A_Metallator
         source/metal_synth.h
+        source/impact_body.h
         source/metallatorids.h
         source/metallatorstate.h
         source/metallatorcontroller.h

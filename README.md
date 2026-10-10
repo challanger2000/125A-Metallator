@@ -8,7 +8,11 @@ Early development of a **new VST3 instrument**, not an update to the old audio-i
 
 ## Sound families
 
-- **IMPACT:** large metallic strikes and multiple recoil impulses.
+- **IMPACT:** one heavy steel strike with 84 independently decaying, inharmonic modes;
+  a broadband contact bite and a decaying, unpitched pressure wave. **No synthetic
+  secondary collisions, tempo echoes or rebound sequences.** Seed changes body
+  geometry and modal spectrum. FORCE 0% is silent. This new design is still under
+  listening review, and is not a physically calibrated steel simulation.
 - **PERC:** smaller metallic hits and brighter cymbal-like noise/resonances, without hardcoded hat/ride/crash categories.
 - **FRICTION:** granular scratches through continuous stick/slip-like excitation; no forced musical pitch.
 - **DRONE:** long aperiodic metal-body beds, optional MIDI pitch tracking when desired.
@@ -17,7 +21,9 @@ No sampled source audio. Sounds are generated deterministically from algorithm, 
 
 ## Controls and operation
 
-ENGINE, SIZE, FORCE, CHAOS, DECAY, DRONE KEY TRACK, LEVEL, GENERATE (toggle), VARIATE (toggle), Bypass. The generic host switches are toggles: **either edge** regenerates the seed. The seed is saved with the project for repeatable results. A future GUI will expose normal buttons, sound audition, favorites and a safe explicit WAV export action outside the audio callback.
+ENGINE, SIZE, FORCE, CHAOS, DECAY, DRONE KEY TRACK, LEVEL, GENERATE (toggle), VARIATE (toggle), Bypass. The generic host switches are toggles: **either edge** regenerates the seed.
+The change is heard on the **next MIDI Note On**; holding a note does not restart
+an existing metallic tail. Trigger another note after using GENERATE / VARIATE. The seed is saved with the project for repeatable results. A future GUI will expose normal buttons, sound audition, favorites and a safe explicit WAV export action outside the audio callback.
 
 ## Development toolchain
 
@@ -31,6 +37,22 @@ ctest --test-dir build --output-on-failure
 ```
 
 These commands compile the SDK-independent core and reference exporter locally. VST3 build uses `-DMETALLATOR_BUILD_VST3=ON` and downloads the pinned SDK.
+
+## Impact rebuild / single-strike QA (development only)
+
+The replacement IMPACT synthesizer was derived from the independently scripted
+`01_Stahltraeger_Kollision.wav` experiment, keeping its distinct low/mid/high
+modal bands and contact/pressure excitation. The separate echo-like rebounds,
+loose-debris impacts, artificial room reflections and offline nonlinear mastering
+were deliberately **not** ported. Resonant modal physics, exponential T60 and
+bounded oscillator recursion are documented/derived; modal frequency spread,
+mechanical sound design and output voicing are **EMPIRICALLY TUNED**.
+
+The core test suite now uses checks that execute in **Release** builds (unlike
+ordinary C++ `assert` under `NDEBUG`). A separate IMPACT contract test verifies
+sample rates, long-lasting body, force response, atonal MIDI triggers, 0% FORCE
+silence, output bounds and deterministic seed changes. The full host and sonic
+release gates remain OPEN.
 
 ## Pending release gates
 

@@ -12,7 +12,7 @@ jobs:
       - name: Configure SDK 3.8.1
         run: cmake -S . -B build -A x64 -DMETALLATOR_BUILD_VST3=ON -DBUILD_TESTING=ON
       - name: Build instrument and deterministic tests
-        run: cmake --build build --config Release --target 125A_Metallator metallator_core_tests metallator_render --parallel 2
+        run: cmake --build build --config Release --target 125A_Metallator metallator_core_tests metallator_impact_contract metallator_render --parallel 2
       - name: Run DSP tests
         run: ctest --test-dir build -C Release --output-on-failure
       - name: Export four reference WAV files

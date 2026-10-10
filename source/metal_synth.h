@@ -6,6 +6,7 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include "impact_body.h"
 
 namespace MetallatorDSP {
 
@@ -75,6 +76,12 @@ public:
         v.rng = scrambled(patch_.seed ^ (0x9e3779b9u * (++hitIndex_)));
         // One deterministic draw per parameter; changes in synthesis do not change patch identity.
         v.charA = randomSigned(v.rng);
+        if (v.mode == Engine::Impact) {
+            v.impact.strike(rate_, patch_.size, patch_.force, patch_.chaos,
+                            patch_.decay, scrambled(v.rng ^ 0x25a4e913u));
+            v.maxAge = v.impact.maxSamples();
+            return;
+        }
         const double size = patch_.size;
         const double chaos = patch_.chaos;
         const bool drone = v.mode == Engine::Drone;
@@ -140,11 +147,22 @@ public:
         const double gain = 0.26 * patch_.level;
         const double l = (mid + side) * gain;
         const double r = (mid - side) * gain;
-        // Bounds unexpected transient combinations without changing the nominal linear signal path.
-        return {std::clamp(l, -0.98, 0.98), std::clamp(r, -0.98, 0.98)};
+        // Continuous bounded soft ceiling for unusually dense polyphony. Exactly linear
+        // up to +/-0.70; C1 at knee. Avoids flat hard-clipped sample plateaus when
+        // many independent metal bodies collide simultaneously. Parameter-free safety,
+        // not a loudness enhancer; normal strikes are predominantly in the linear region.
+        return {softCeiling(l), softCeiling(r)};
     }
 
 private:
+    static double softCeiling(double x) noexcept {
+        constexpr double knee = 0.70, headroom = 0.28;
+        const double a = std::abs(x);
+        if (a <= knee) return x;
+        const double d = a - knee;
+        const double y = knee + headroom * d / (headroom + d);
+        return std::copysign(y, x);
+    }
     struct Mode {
         double y1 {0}, y2 {0};
         double a1 {0}, a2 {0}, inGain {0}, outGain {0}, sideGain {0};
@@ -159,6 +177,7 @@ private:
         double charA {0};
         double prevNoise {0}, noiseLow {0}, scrapeMemory {0};
         double releaseGain {1};
+        ImpactBody impact {};
         std::array<Mode, kModes> modes {};
     };
     int findVoice() noexcept {
@@ -169,6 +188,14 @@ private:
         return index;
     }
     std::array<double, 2> renderVoice(Voice& v) noexcept {
+        if (v.mode == Engine::Impact) {
+            const auto body = v.impact.render();
+            const double amp = 0.75 * v.velocity; // 2.5 dB headroom for a single strike
+            ++v.age;
+            if (v.age >= v.maxAge) v.active = false;
+            return {std::isfinite(body.l) ? body.l * amp : 0.0,
+                    std::isfinite(body.r) ? body.r * amp : 0.0};
+        }
         const double time = double(v.age) / rate_;
         const double noise = randomSigned(v.rng);
         const double high = noise - v.prevNoise;
