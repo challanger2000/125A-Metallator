@@ -92,7 +92,13 @@ public:
             const double phase = kTau * frequency / rate_;
             // Shorter modal memory for friction, longer for bodies. For drones,
             // wide distributed resonances deliberately avoid a prominent root tone.
-            const double damping = t60 * (0.45 + 1.1*rand01()) * (engine_ == 2 ? .42 : 1.0);
+            // A tightly braced massive block dissipates modal energy quickly;
+            // a freely suspended sheet holds bending resonances substantially longer.
+            // Shape is determined by structure (GENERATE), not by global pitch.
+            const double contactDamping = engine_ == 0 && shape_ == 1 ? .32 :
+                                          engine_ == 0 && shape_ == 3 ? 1.35 : 1.0;
+            const double damping = t60 * (0.45 + 1.1*rand01()) *
+                                   (engine_ == 2 ? .42 : 1.0) * contactDamping;
             const double radius = std::exp(-6.907755278982137 / (rate_ * std::max(.012,damping)));
             m.a1 = 2*radius*std::cos(phase);
             m.a2 = -radius*radius;
