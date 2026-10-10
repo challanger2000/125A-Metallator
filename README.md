@@ -35,3 +35,7 @@ Source of truth: `challanger2000/125A-Engineering/START-HERE.md`; 125A logo/knob
 `ctest --test-dir build --output-on-failure`
 
 No Windows/Studio One or sonically approved release claim is implied by offline tests.
+
+## Provisional VSTGUI
+
+Real native UI (IMPACT/PERC, 5 knobs, GENERATE, VARIATE, BYPASS), at 940x478 and VSTGUI context zoom 100/150%. Not final visual branding; DAW/editor lifecycle QA pending. See docs/GUI-PROTOTYPE.md.

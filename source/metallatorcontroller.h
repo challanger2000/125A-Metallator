@@ -6,5 +6,6 @@ public:
     static FUnknown* createInstance(void*){return static_cast<IEditController*>(new Controller());}
     tresult PLUGIN_API initialize(FUnknown*) SMTG_OVERRIDE;
     tresult PLUGIN_API setComponentState(IBStream*) SMTG_OVERRIDE;
+    IPlugView* PLUGIN_API createView(FIDString name) SMTG_OVERRIDE;
 };
 }

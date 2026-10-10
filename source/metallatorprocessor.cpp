@@ -51,7 +51,7 @@ void Processor::applyValue(ParamID id,ParamValue val) noexcept {
         case kKeyTrackId: values_.patch.keyTrack=x; break; // Legacy hidden parameter; no sound effect.
         case kLevelId: values_.patch.level=x; break;
         case kGenerateId:
-            if((x>=0.5)!=(values_.generate>=0.5)){
+            if(x>=0.5 && values_.generate<0.5){
                 // GENERATE cycles a genuinely different mechanical archetype.
                 // Seed additionally changes construction microgeometry; no MIDI pitch mapping.
                 MetallatorDSP::generateNewStructure(values_.patch);
@@ -59,7 +59,7 @@ void Processor::applyValue(ParamID id,ParamValue val) noexcept {
             values_.generate=x;
             break;
         case kVariateId:
-            if((x>=0.5)!=(values_.variate>=0.5)) {
+            if(x>=0.5 && values_.variate<0.5) {
                 // VARIATE must preserve the selected archetype and only change details.
                 MetallatorDSP::variateStructure(values_.patch);
             }

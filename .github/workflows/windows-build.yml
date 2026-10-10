@@ -1,7 +1,7 @@
-name: Metallator V1 Windows CI
+name: Metallator VSTGUI Milestone Windows CI
 on:
   push:
-    branches: [v1.0.0-synth-dev, v1.0.0-sound-diversity-audit] # percussion-focus intentionally not built until GUI milestone
+    branches: [v1.0.0-provisional-vstgui]
   workflow_dispatch:
 jobs:
   build:
@@ -9,30 +9,32 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - name: Configure SDK 3.8.1
+      - name: Configure VST3 SDK and VSTGUI
         run: cmake -S . -B build -A x64 -DMETALLATOR_BUILD_VST3=ON -DBUILD_TESTING=ON
-      - name: Build instrument and deterministic tests
-        run: cmake --build build --config Release --target 125A_Metallator metallator_core_tests metallator_impact_contract metallator_render --parallel 2
-      - name: Run DSP tests
+      - name: Build VST3 and all five DSP suites
+        run: cmake --build build --config Release --target 125A_Metallator metallator_core_tests metallator_impact_contract metallator_stereo_contract metallator_diversity_contract metallator_seed_matrix --parallel 2
+      - name: Run deterministic regression suites
         run: ctest --test-dir build -C Release --output-on-failure
-      - name: Export eight metal-percussion reference WAV files
+      - name: Verify actual VSTGUI plugin bundle
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Path exports -Force | Out-Null
-          foreach ($engine in @('impact','perc')) {
-            foreach ($archetype in 0..3) {
-              $file = "exports\" + $engine + "_" + $archetype + ".wav"
-              & .\build\Release\metallator_render.exe $engine $file 307896358 $archetype
-              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-            }
+          $pkg = "build\VST3\Release\125A_Metallator.vst3"
+          $bin = Join-Path $pkg "Contents\x86_64-win\125A_Metallator.vst3"
+          $ui = Join-Path $pkg "Contents\Resources\metallator.uidesc"
+          foreach ($f in @($bin, $ui)) {
+            if (-not (Test-Path $f)) { throw "Missing required VSTGUI binary/resource: $f" }
           }
-          if ((Get-ChildItem exports -Filter *.wav).Count -ne 8) { throw "Expected eight WAVs" }
-      - name: Upload instrument and reference WAVs
+          [xml]$doc = Get-Content $ui -Raw
+          $tags = @($doc.'vstgui-ui-description'.'control-tags'.'control-tag')
+          foreach ($id in @('1000','1001','1002','1003','1004','1006','1007','1008','1009')) {
+            if (-not ($tags | Where-Object { $_.tag -eq $id })) { throw "Missing binding ID $id" }
+          }
+          Write-Host "VSTGUI resource, nine parameter IDs, bundle structure PASS"
+          Get-FileHash -Algorithm SHA256 $bin
+      - name: Upload internal GUI milestone (not a release)
         uses: actions/upload-artifact@v4
         with:
-          name: 125A-Metallator-8-Metal-Percussion-DEV
-          path: |
-            build/VST3/Release/125A_Metallator.vst3
-            exports/*.wav
+          name: 125A-Metallator-Provisional-VSTGUI-INTERNAL
+          path: build/VST3/Release/125A_Metallator.vst3
           if-no-files-found: error
           retention-days: 7

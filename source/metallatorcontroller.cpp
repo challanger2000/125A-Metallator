@@ -2,7 +2,16 @@
 #include "metallatorids.h"
 #include "metallatorstate.h"
 #include "pluginterfaces/base/ibstream.h"
+#include "vstgui/plugin-bindings/vst3editor.h"
+#include <cstring>
 namespace Steinberg::Vst::Metallator {
+IPlugView* PLUGIN_API Controller::createView(FIDString name) {
+    if (!name || std::strcmp(name, ViewType::kEditor) != 0) return nullptr;
+    // Parameter-tagged VSTGUI template: controller owns no GUI timers or DSP state.
+    auto* editor = new VSTGUI::VST3Editor(this, "view", "metallator.uidesc");
+    editor->setAllowedZoomFactors({1.0, 1.5});
+    return editor;
+}
 tresult PLUGIN_API Controller::initialize(FUnknown* ctx){
     const auto result=EditController::initialize(ctx);
     if(result!=kResultOk)return result;

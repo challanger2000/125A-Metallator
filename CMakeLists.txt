@@ -30,7 +30,7 @@ if(METALLATOR_BUILD_VST3)
     include(FetchContent)
     set(SMTG_ENABLE_VST3_PLUGIN_EXAMPLES OFF CACHE BOOL "" FORCE)
     set(SMTG_ENABLE_VST3_HOSTING_EXAMPLES OFF CACHE BOOL "" FORCE)
-    set(SMTG_ENABLE_VSTGUI_SUPPORT OFF CACHE BOOL "" FORCE)
+    set(SMTG_ENABLE_VSTGUI_SUPPORT ON CACHE BOOL "" FORCE)
     FetchContent_Declare(vst3sdk
         GIT_REPOSITORY https://github.com/steinbergmedia/vst3sdk.git
         GIT_TAG v3.8.1_build_84
@@ -50,7 +50,8 @@ if(METALLATOR_BUILD_VST3)
         source/factory.cpp
         source/version.h)
     target_compile_definitions(125A_Metallator PRIVATE SMTG_USE_STDATOMIC_H=1)
-    target_link_libraries(125A_Metallator PRIVATE sdk)
+    target_link_libraries(125A_Metallator PRIVATE sdk vstgui_support)
+    smtg_target_add_plugin_resources(125A_Metallator RESOURCES resource/metallator.uidesc)
     smtg_target_configure_version_file(125A_Metallator)
     if(SMTG_WIN)
         target_compile_definitions(125A_Metallator PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
